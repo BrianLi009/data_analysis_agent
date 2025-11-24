@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-配置管理模块
+Configuration management module
 """
 
 import os
@@ -15,7 +15,7 @@ load_dotenv()
 
 @dataclass
 class LLMConfig:
-    """LLM配置"""
+    """LLM configuration"""
 
     provider: str = "openai"  # openai, anthropic, etc.
     api_key: str = os.environ.get("OPENAI_API_KEY", "")
@@ -25,16 +25,16 @@ class LLMConfig:
     max_tokens: int = 16384
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'LLMConfig':
-        """从字典创建配置"""
+        """Create configuration from dictionary"""
         return cls(**data)
 
     def validate(self) -> bool:
-        """验证配置有效性"""
+        """Validate configuration validity"""
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is required")
         if not self.base_url:

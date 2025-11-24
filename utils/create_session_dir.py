@@ -2,10 +2,10 @@ import os
 import uuid
 
 def create_session_output_dir(base_output_dir,user_input: str) -> str:
-    """为本次分析创建独立的输出目录"""
+    """Create an independent output directory for this analysis"""
 
     
-    # 使用UUID创建唯一的会话目录名（16进制格式，去掉连字符）
+    # Use UUID to create unique session directory name (hexadecimal format, remove hyphens)
     session_id = uuid.uuid4().hex
     dir_name = f"session_{session_id}"
     session_dir = os.path.join(base_output_dir, dir_name)

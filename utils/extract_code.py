@@ -3,9 +3,9 @@ import yaml
 
 
 def extract_code_from_response(response: str) -> Optional[str]:
-        """从LLM响应中提取代码"""
+        """Extract code from LLM response"""
         try:
-            # 尝试解析YAML
+            # Try to parse YAML
             if '```yaml' in response:
                 start = response.find('```yaml') + 7
                 end = response.find('```', start)
@@ -23,7 +23,7 @@ def extract_code_from_response(response: str) -> Optional[str]:
         except:
             pass
         
-        # 如果YAML解析失败，尝试提取```python代码块
+        # If YAML parsing fails, try to extract ```python code block
         if '```python' in response:
             start = response.find('```python') + 9
             end = response.find('```', start)

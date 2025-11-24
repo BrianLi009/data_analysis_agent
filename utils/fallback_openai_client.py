@@ -6,8 +6,8 @@ from openai.types.chat import ChatCompletion
 
 class AsyncFallbackOpenAIClient:
     """
-    一个支持备用 API 自动切换的异步 OpenAI 客户端。
-    当主 API 调用因特定错误（如内容过滤）失败时，会自动尝试使用备用 API。
+    An asynchronous OpenAI client that supports automatic fallback API switching.
+    When the primary API call fails due to specific errors (such as content filtering), it will automatically try to use the fallback API.
     """
     def __init__(
         self,
@@ -19,32 +19,32 @@ class AsyncFallbackOpenAIClient:
         fallback_model_name: Optional[str] = None,
         primary_client_args: Optional[Dict[str, Any]] = None,
         fallback_client_args: Optional[Dict[str, Any]] = None,
-        content_filter_error_code: str = "1301", # 特定于 Zhipu 的内容过滤错误代码
-        content_filter_error_field: str = "contentFilter", # 特定于 Zhipu 的内容过滤错误字段
-        max_retries_primary: int = 1, # 主API重试次数
-        max_retries_fallback: int = 1, # 备用API重试次数
-        retry_delay_seconds: float = 1.0 # 重试延迟时间
+        content_filter_error_code: str = "1301", # Content filtering error code specific to Zhipu
+        content_filter_error_field: str = "contentFilter", # Content filtering error field specific to Zhipu
+        max_retries_primary: int = 1, # Primary API retry count
+        max_retries_fallback: int = 1, # Fallback API retry count
+        retry_delay_seconds: float = 1.0 # Retry delay time
     ):
         """
-        初始化 AsyncFallbackOpenAIClient。
+        Initialize AsyncFallbackOpenAIClient.
 
         Args:
-            primary_api_key: 主 API 的密钥。
-            primary_base_url: 主 API 的基础 URL。
-            primary_model_name: 主 API 使用的模型名称。
-            fallback_api_key: 备用 API 的密钥 (可选)。
-            fallback_base_url: 备用 API 的基础 URL (可选)。
-            fallback_model_name: 备用 API 使用的模型名称 (可选)。
-            primary_client_args: 传递给主 AsyncOpenAI 客户端的其他参数。
-            fallback_client_args: 传递给备用 AsyncOpenAI 客户端的其他参数。
-            content_filter_error_code: 触发回退的内容过滤错误的特定错误代码。
-            content_filter_error_field: 触发回退的内容过滤错误中存在的字段名。
-            max_retries_primary: 主 API 失败时的最大重试次数。
-            max_retries_fallback: 备用 API 失败时的最大重试次数。
-            retry_delay_seconds: 重试前的延迟时间（秒）。
+            primary_api_key: Primary API key.
+            primary_base_url: Primary API base URL.
+            primary_model_name: Model name used by primary API.
+            fallback_api_key: Fallback API key (optional).
+            fallback_base_url: Fallback API base URL (optional).
+            fallback_model_name: Model name used by fallback API (optional).
+            primary_client_args: Additional arguments passed to primary AsyncOpenAI client.
+            fallback_client_args: Additional arguments passed to fallback AsyncOpenAI client.
+            content_filter_error_code: Specific error code for content filtering errors that trigger fallback.
+            content_filter_error_field: Field name present in content filtering errors that trigger fallback.
+            max_retries_primary: Maximum retry count when primary API fails.
+            max_retries_fallback: Maximum retry count when fallback API fails.
+            retry_delay_seconds: Delay time before retry (seconds).
         """
         if not primary_api_key or not primary_base_url:
-            raise ValueError("主 API 密钥和基础 URL 不能为空。")
+            raise ValueError("Primary API key and base URL cannot be empty.")
 
         _primary_args = primary_client_args or {}
         self.primary_client = AsyncOpenAI(api_key=primary_api_key, base_url=primary_base_url, **_primary_args)
@@ -57,7 +57,7 @@ class AsyncFallbackOpenAIClient:
             self.fallback_client = AsyncOpenAI(api_key=fallback_api_key, base_url=fallback_base_url, **_fallback_args)
             self.fallback_model_name = fallback_model_name
         else:
-            print("⚠️ 警告: 未完全配置备用 API 客户端。如果主 API 失败，将无法进行回退。")
+            print("⚠️ Warning: Fallback API client not fully configured. If primary API fails, fallback will not be available.")
 
         self.content_filter_error_code = content_filter_error_code
         self.content_filter_error_field = content_filter_error_field
@@ -76,26 +76,26 @@ class AsyncFallbackOpenAIClient:
         **kwargs: Any
     ) -> ChatCompletion:
         """
-        尝试调用指定的 OpenAI API 客户端，并进行重试。
+        Attempt to call the specified OpenAI API client with retries.
         """
         last_exception = None
         for attempt in range(max_retries + 1):
             try:
-                # print(f"尝试使用 {api_name} API ({client.base_url}) 模型: {kwargs.get('model', model_name)}, 第 {attempt + 1} 次尝试")
+                # print(f"Attempting to use {api_name} API ({client.base_url}) model: {kwargs.get('model', model_name)}, attempt {attempt + 1}")
                 completion = await client.chat.completions.create(
                     model=kwargs.pop('model', model_name),
                     messages=messages,
                     **kwargs
                 )
                 return completion
-            except (APIConnectionError, APITimeoutError) as e: # 通常可以重试的网络错误
+            except (APIConnectionError, APITimeoutError) as e: # Network errors that can usually be retried
                 last_exception = e
-                print(f"⚠️ {api_name} API 调用时发生可重试错误 ({type(e).__name__}): {e}. 尝试次数 {attempt + 1}/{max_retries + 1}")
+                print(f"⚠️ Retryable error occurred when calling {api_name} API ({type(e).__name__}): {e}. Attempt {attempt + 1}/{max_retries + 1}")
                 if attempt < max_retries:
-                    await asyncio.sleep(self.retry_delay_seconds * (attempt + 1)) # 增加延迟
+                    await asyncio.sleep(self.retry_delay_seconds * (attempt + 1)) # Increase delay
                 else:
-                    print(f"❌ {api_name} API 在达到最大重试次数后仍然失败。")
-            except APIStatusError as e: # API 返回的特定状态码错误
+                    print(f"❌ {api_name} API still failed after reaching maximum retry count.")
+            except APIStatusError as e: # Specific status code errors returned by API
                 is_content_filter_error = False
                 if e.status_code == 400:
                     try:
@@ -105,48 +105,48 @@ class AsyncFallbackOpenAIClient:
                             self.content_filter_error_field in error_json):
                             is_content_filter_error = True
                     except Exception:
-                        pass # 解析错误响应失败，不认为是内容过滤错误
+                        pass # Failed to parse error response, don't consider it a content filtering error
                 
-                if is_content_filter_error and api_name == "主": # 如果是主 API 的内容过滤错误，则直接抛出以便回退
+                if is_content_filter_error and api_name == "Primary": # If it's a content filtering error from primary API, raise directly for fallback
                     raise e 
                 
                 last_exception = e
-                print(f"⚠️ {api_name} API 调用时发生 APIStatusError ({e.status_code}): {e}. 尝试次数 {attempt + 1}/{max_retries + 1}")
+                print(f"⚠️ APIStatusError occurred when calling {api_name} API ({e.status_code}): {e}. Attempt {attempt + 1}/{max_retries + 1}")
                 if attempt < max_retries:
                     await asyncio.sleep(self.retry_delay_seconds * (attempt + 1))
                 else:
-                    print(f"❌ {api_name} API 在达到最大重试次数后仍然失败 (APIStatusError)。")
-            except APIError as e: # 其他不可轻易重试的 OpenAI 错误
+                    print(f"❌ {api_name} API still failed after reaching maximum retry count (APIStatusError).")
+            except APIError as e: # Other OpenAI errors that cannot be easily retried
                 last_exception = e
-                print(f"❌ {api_name} API 调用时发生不可重试错误 ({type(e).__name__}): {e}")
-                break # 不再重试此类错误
+                print(f"❌ Non-retryable error occurred when calling {api_name} API ({type(e).__name__}): {e}")
+                break # Don't retry this type of error
         
         if last_exception:
             raise last_exception
-        raise RuntimeError(f"{api_name} API 调用意外失败。") # 理论上不应到达这里
+        raise RuntimeError(f"{api_name} API call unexpectedly failed.") # Theoretically should not reach here
 
     async def chat_completions_create(
         self,
         messages: list[Mapping[str, Any]],
-        **kwargs: Any  # 用于传递其他 OpenAI 参数，如 max_tokens, temperature 等。
+        **kwargs: Any  # Used to pass other OpenAI parameters such as max_tokens, temperature, etc.
     ) -> ChatCompletion:
         """
-        使用主 API 创建聊天补全，如果发生特定内容过滤错误或主 API 调用失败，则回退到备用 API。
-        支持对主 API 和备用 API 的可重试错误进行重试。
+        Create chat completion using primary API, fallback to fallback API if specific content filtering error occurs or primary API call fails.
+        Supports retries for retryable errors on both primary and fallback APIs.
 
         Args:
-            messages: OpenAI API 的消息列表。
-            **kwargs: 传递给 OpenAI API 调用的其他参数。
+            messages: Message list for OpenAI API.
+            **kwargs: Additional parameters passed to OpenAI API call.
 
         Returns:
-            ChatCompletion 对象。
+            ChatCompletion object.
 
         Raises:
-            APIError: 如果主 API 和备用 API (如果尝试) 都返回 API 错误。
-            RuntimeError: 如果客户端已关闭。
+            APIError: If both primary API and fallback API (if attempted) return API errors.
+            RuntimeError: If client is closed.
         """
         if self._closed:
-            raise RuntimeError("客户端已关闭。")
+            raise RuntimeError("Client is closed.")
             
         try:
             completion = await self._attempt_api_call(
@@ -154,7 +154,7 @@ class AsyncFallbackOpenAIClient:
                 model_name=self.primary_model_name,
                 messages=messages,
                 max_retries=self.max_retries_primary,
-                api_name="主",
+                api_name="Primary",
                 **kwargs.copy()
             )
             return completion
@@ -171,59 +171,59 @@ class AsyncFallbackOpenAIClient:
                     pass 
             
             if is_content_filter_error and self.fallback_client and self.fallback_model_name:
-                print(f"ℹ️ 主 API 内容过滤错误 ({e_primary.status_code})。尝试切换到备用 API ({self.fallback_client.base_url})...")
+                print(f"ℹ️ Primary API content filtering error ({e_primary.status_code}). Attempting to switch to fallback API ({self.fallback_client.base_url})...")
                 try:
                     fallback_completion = await self._attempt_api_call(
                         client=self.fallback_client,
                         model_name=self.fallback_model_name,
                         messages=messages,
                         max_retries=self.max_retries_fallback,
-                        api_name="备用",
+                        api_name="Fallback",
                         **kwargs.copy()
                     )
-                    print(f"✅ 备用 API 调用成功。")
+                    print(f"✅ Fallback API call successful.")
                     return fallback_completion
                 except APIError as e_fallback:
-                    print(f"❌ 备用 API 调用最终失败: {type(e_fallback).__name__} - {e_fallback}")
+                    print(f"❌ Fallback API call ultimately failed: {type(e_fallback).__name__} - {e_fallback}")
                     raise e_fallback 
             else:
                 if not (self.fallback_client and self.fallback_model_name and is_content_filter_error):
-                     # 如果不是内容过滤错误，或者没有可用的备用API，则记录主API的原始错误
-                    print(f"ℹ️ 主 API 错误 ({type(e_primary).__name__}: {e_primary}), 且不满足备用条件或备用API未配置。")
+                     # If it's not a content filtering error, or no fallback API is available, log the original primary API error
+                    print(f"ℹ️ Primary API error ({type(e_primary).__name__}: {e_primary}), and fallback conditions not met or fallback API not configured.")
                 raise e_primary
         except APIError as e_primary_other: 
-            print(f"❌ 主 API 调用最终失败 (非内容过滤，错误类型: {type(e_primary_other).__name__}): {e_primary_other}")
+            print(f"❌ Primary API call ultimately failed (non-content filtering, error type: {type(e_primary_other).__name__}): {e_primary_other}")
             if self.fallback_client and self.fallback_model_name:
-                print(f"ℹ️ 主 API 失败，尝试切换到备用 API ({self.fallback_client.base_url})...")
+                print(f"ℹ️ Primary API failed, attempting to switch to fallback API ({self.fallback_client.base_url})...")
                 try:
                     fallback_completion = await self._attempt_api_call(
                         client=self.fallback_client,
                         model_name=self.fallback_model_name,
                         messages=messages,
                         max_retries=self.max_retries_fallback,
-                        api_name="备用",
+                        api_name="Fallback",
                         **kwargs.copy()
                     )
-                    print(f"✅ 备用 API 调用成功。")
+                    print(f"✅ Fallback API call successful.")
                     return fallback_completion
                 except APIError as e_fallback_after_primary_fail:
-                    print(f"❌ 备用 API 在主 API 失败后也调用失败: {type(e_fallback_after_primary_fail).__name__} - {e_fallback_after_primary_fail}")
+                    print(f"❌ Fallback API also failed after primary API failure: {type(e_fallback_after_primary_fail).__name__} - {e_fallback_after_primary_fail}")
                     raise e_fallback_after_primary_fail 
             else: 
                 raise e_primary_other
 
     async def close(self):
-        """异步关闭主客户端和备用客户端 (如果存在)。"""
+        """Asynchronously close primary and fallback clients (if they exist)."""
         if not self._closed:
             await self.primary_client.close()
             if self.fallback_client:
                 await self.fallback_client.close()
             self._closed = True
-            # print("AsyncFallbackOpenAIClient 已关闭。")
+            # print("AsyncFallbackOpenAIClient has been closed.")
 
     async def __aenter__(self):
         if self._closed:
-            raise RuntimeError("AsyncFallbackOpenAIClient 不能在关闭后重新进入。请创建一个新实例。")
+            raise RuntimeError("AsyncFallbackOpenAIClient cannot be re-entered after closing. Please create a new instance.")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

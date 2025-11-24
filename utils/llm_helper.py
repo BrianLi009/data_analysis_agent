@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-LLM调用辅助模块
+LLM call helper module
 """
 
 import asyncio
@@ -9,7 +9,7 @@ from config.llm_config import LLMConfig
 from utils.fallback_openai_client import AsyncFallbackOpenAIClient
 
 class LLMHelper:
-    """LLM调用辅助类，支持同步和异步调用"""
+    """LLM call helper class, supports synchronous and asynchronous calls"""
     
     def __init__(self, config: LLMConfig = None):
         self.config = config
@@ -20,7 +20,7 @@ class LLMHelper:
         )
     
     async def async_call(self, prompt: str, system_prompt: str = None, max_tokens: int = None, temperature: float = None) -> str:
-        """异步调用LLM"""
+        """Asynchronously call LLM"""
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -44,17 +44,17 @@ class LLMHelper:
             )
             return response.choices[0].message.content
         except Exception as e:
-            print(f"LLM调用失败: {e}")
+            print(f"LLM call failed: {e}")
             return ""
     
     def call(self, prompt: str, system_prompt: str = None, max_tokens: int = None, temperature: float = None) -> str:
-        """同步调用LLM"""
+        """Synchronously call LLM"""
         return asyncio.run(self.async_call(prompt, system_prompt, max_tokens, temperature))
     
     def parse_yaml_response(self, response: str) -> dict:
-        """解析YAML格式的响应"""
+        """Parse YAML format response"""
         try:
-            # 提取```yaml和```之间的内容
+            # Extract content between ```yaml and ```
             if '```yaml' in response:
                 start = response.find('```yaml') + 7
                 end = response.find('```', start)
@@ -68,10 +68,10 @@ class LLMHelper:
             
             return yaml.safe_load(yaml_content)
         except Exception as e:
-            print(f"YAML解析失败: {e}")
-            print(f"原始响应: {response}")
+            print(f"YAML parsing failed: {e}")
+            print(f"Original response: {response}")
             return {}
     
     async def close(self):
-        """关闭客户端"""
+        """Close client"""
         await self.client.close()

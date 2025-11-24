@@ -4,8 +4,8 @@ from config.llm_config import LLMConfig
 def main():
     llm_config = LLMConfig()
     agent = DataAnalysisAgent(llm_config)
-    files = ["./贵州茅台利润表.csv"]
-    report = agent.analyze(user_input="基于贵州茅台的数据，输出五个重要的统计指标，并绘制相关图表。最后生成汇报给我。",files=files)
+    files = ["./comp-demo-data.csv"]
+    report = agent.analyze(user_input="provide analysis on AVERAGE of Base Pay over different Pay Zone, separated by different tenure group.",files=files)
     print(report)
     
 if __name__ == "__main__":
