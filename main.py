@@ -5,7 +5,7 @@ def main():
     llm_config = LLMConfig()
     agent = DataAnalysisAgent(llm_config)
     files = ["./comp-demo-data.csv"]
-    report = agent.analyze(user_input="provide analysis on AVERAGE of Base Pay over different Pay Zone, separated by different tenure group.",files=files)
+    report = agent.analyze(user_input="what is the average base pay for M2 in USA zone 1?",files=files)
     print(report)
     
 if __name__ == "__main__":

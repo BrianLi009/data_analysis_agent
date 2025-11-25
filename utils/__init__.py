@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-工具模块初始化文件
+Utility module initialization file
 """
 
 from utils.code_executor import CodeExecutor

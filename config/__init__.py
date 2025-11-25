@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-配置模块
+Configuration module
 """
 
 from .llm_config import LLMConfig

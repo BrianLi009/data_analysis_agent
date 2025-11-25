@@ -119,8 +119,37 @@ from IPython.display import display
             # Check for dangerous function calls
             elif isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Name):
-                    if node.func.id in ['exec', 'eval', 'open', '__import__']:
-                        return False, f"Disallowed function call: {node.func.id}"
+                    func_name = node.func.id
+                    
+                    # Block exec, eval, __import__ unconditionally
+                    if func_name in ['exec', 'eval', '__import__']:
+                        return False, f"Disallowed function call: {func_name}"
+                    
+                    # Allow open() for write operations (w, a, x modes) - needed for generating output files
+                    if func_name == 'open':
+                        # Check if it's a write operation
+                        is_write_mode = False
+                        
+                        # Check mode argument (second positional or keyword 'mode')
+                        if len(node.args) > 1:
+                            mode_arg = node.args[1]
+                            if isinstance(mode_arg, (ast.Str, ast.Constant)):
+                                mode = mode_arg.s if isinstance(mode_arg, ast.Str) else mode_arg.value
+                                if mode and isinstance(mode, str) and mode[0] in ['w', 'a', 'x']:
+                                    is_write_mode = True
+                        
+                        # Check keyword arguments
+                        for keyword in node.keywords:
+                            if keyword.arg == 'mode':
+                                if isinstance(keyword.value, (ast.Str, ast.Constant)):
+                                    mode = keyword.value.s if isinstance(keyword.value, ast.Str) else keyword.value.value
+                                    if mode and isinstance(mode, str) and mode[0] in ['w', 'a', 'x']:
+                                        is_write_mode = True
+                        
+                        # If write mode, allow it (for generating .jsx, .json files in output directory)
+                        # If read mode (default or 'r'), block it for security
+                        if not is_write_mode:
+                            return False, f"Disallowed file read operation: open() in read mode is not allowed for security"
         
         return True, ""
     

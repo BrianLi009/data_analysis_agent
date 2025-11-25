@@ -138,9 +138,10 @@ outputs/
 *.docx
 *.xlsx
 *.csv
-!贵州茅台利润表.csv
+# Allow demo CSV files in root directory
+!comp-demo-data.csv
 
-# 允许assets目录下的图片文件（项目资源）
+# Allow image files in assets directory (project resources)
 !assets/**/*.png
 !assets/**/*.jpg
 !assets/**/*.jpeg
